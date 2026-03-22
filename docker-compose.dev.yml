@@ -1,0 +1,59 @@
+version: '3.8'
+
+# Development override — hot reload, debug ports, dev tools
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder        # Use builder stage (has devDependencies)
+    container_name: taskflow-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "9229:9229"           # Node.js debugger port
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/tododb_dev
+      - DEBUG=app:*
+    volumes:
+      - .:/app                # Mount source for hot reload
+      - /app/node_modules     # Prevent overwriting container's node_modules
+    command: npm run dev
+    depends_on:
+      - mongo
+    networks:
+      - taskflow-net
+
+  mongo:
+    image: mongo:6.0-focal
+    container_name: taskflow-mongo-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-dev-data:/data/db
+    networks:
+      - taskflow-net
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: taskflow-mongo-ui-dev
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongo
+    networks:
+      - taskflow-net
+
+volumes:
+  mongo-dev-data:
+
+networks:
+  taskflow-net:
+    driver: bridge
